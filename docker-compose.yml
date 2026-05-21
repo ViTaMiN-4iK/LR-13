@@ -1,0 +1,104 @@
+services:
+  nats:
+    image: nats:2.10
+    command: ["-js", "-m", "8222"]
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.60
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686"
+      - "4318:4318"
+
+  orchestrator-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.python
+    environment:
+      NATS_URL: nats://nats:4222
+    depends_on:
+      - nats
+    ports:
+      - "8000:8000"
+
+  llm-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile.python
+    command: ["python", "-m", "orchestrator.llm_agent"]
+    environment:
+      NATS_URL: nats://nats:4222
+      OLLAMA_URL: ${OLLAMA_URL:-}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.1}
+    depends_on:
+      - nats
+    profiles:
+      - llm
+
+  log-collector:
+    build:
+      context: .
+      dockerfile: agents/Dockerfile
+      args:
+        AGENT: log_collector
+    environment:
+      AGENT_NAME: log-collector
+      NATS_URL: nats://nats:4222
+      OTEL_EXPORTER_OTLP_ENDPOINT: jaeger:4318
+    depends_on:
+      - nats
+      - jaeger
+
+  correlator:
+    build:
+      context: .
+      dockerfile: agents/Dockerfile
+      args:
+        AGENT: correlator
+    environment:
+      AGENT_NAME: event-correlator
+      NATS_URL: nats://nats:4222
+      OTEL_EXPORTER_OTLP_ENDPOINT: jaeger:4318
+    depends_on:
+      - nats
+      - jaeger
+
+  attack-detector:
+    build:
+      context: .
+      dockerfile: agents/Dockerfile
+      args:
+        AGENT: detector
+    environment:
+      AGENT_NAME: attack-detector
+      NATS_URL: nats://nats:4222
+      OTEL_EXPORTER_OTLP_ENDPOINT: jaeger:4318
+    depends_on:
+      - nats
+      - jaeger
+
+  traffic-blocker:
+    build:
+      context: .
+      dockerfile: agents/Dockerfile
+      args:
+        AGENT: blocker
+    environment:
+      AGENT_NAME: traffic-blocker
+      NATS_URL: nats://nats:4222
+      REDIS_ADDR: redis:6379
+      OTEL_EXPORTER_OTLP_ENDPOINT: jaeger:4318
+    depends_on:
+      - nats
+      - redis
+      - jaeger
+
