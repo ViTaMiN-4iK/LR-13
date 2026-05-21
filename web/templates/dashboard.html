@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <title>SIEM MAS</title>
+  <style>
+    body { margin: 0; font-family: Arial, sans-serif; background: #f5f7fb; color: #172033; }
+    header { padding: 24px 32px; background: #172033; color: white; }
+    main { padding: 24px 32px; display: grid; gap: 16px; }
+    section { background: white; border: 1px solid #dbe2ef; border-radius: 8px; padding: 16px; }
+    code, pre { white-space: pre-wrap; word-break: break-word; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>SIEM MAS: вариант 17</h1>
+  </header>
+  <main>
+    <section>
+      <h2>Статус</h2>
+      <p>NATS: {{ "connected" if status.connected else "disconnected" }}</p>
+      <p>Ожидающие задачи: {{ status.pending_tasks|length }}</p>
+    </section>
+    <section>
+      <h2>Последние события</h2>
+      <pre>{{ status.audit_events }}</pre>
+    </section>
+  </main>
+</body>
+</html>
+
